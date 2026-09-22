@@ -1,0 +1,19 @@
+import React,{useEffect,useMemo,useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import './styles.css';
+
+const API=import.meta.env.VITE_API_URL||'http://localhost:4000';
+const money=n=>new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(Number(n||0));
+function App(){
+ const [products,setProducts]=useState([]),[categories,setCategories]=useState([]),[cart,setCart]=useState([]),[q,setQ]=useState(''),[cat,setCat]=useState('all'),[loading,setLoading]=useState(true);
+ useEffect(()=>{Promise.all([fetch(`${API}/api/products`).then(r=>r.json()),fetch(`${API}/api/categories`).then(r=>r.json())]).then(([p,c])=>{setProducts(Array.isArray(p)?p:[]);setCategories(Array.isArray(c)?c:[])}).finally(()=>setLoading(false))},[]);
+ const visible=useMemo(()=>products.filter(p=>(cat==='all'||p.category_id===cat)&&(!q||p.name.toLowerCase().includes(q.toLowerCase()))),[products,cat,q]);
+ const add=p=>setCart(c=>{const x=c.find(i=>i.id===p.id);return x?c.map(i=>i.id===p.id?{...i,quantity:i.quantity+1}:i):[...c,{...p,quantity:1}]});
+ const total=cart.reduce((s,i)=>s+Number(i.price)*i.quantity,0);
+ return <div><header><div className="brand"><span className="mark">⌂</span><div><b>CRAVE HOUSE</b><small>WHATEVER YOU’RE CRAVING.</small></div></div><nav><a href="#menu">Menu</a><a href="#about">About</a><button className="cart">Cart ({cart.reduce((s,i)=>s+i.quantity,0)})</button></nav></header>
+ <main><section className="hero"><div><p className="eyebrow">KUBWA • ABUJA</p><h1>Good food.<br/><em>Big cravings.</em></h1><p>Meals, quick bites, snacks, treats and drinks — made for whatever you're craving.</p><a className="primary" href="#menu">Order now</a></div><div className="hero-card"><span>CRAVE</span><strong>HOUSE</strong><small>RESTAURANT & QUICK SERVICE</small></div></section>
+ <section id="menu" className="menu"><div className="section-head"><div><p className="eyebrow">OUR MENU</p><h2>Pick your craving</h2></div><input placeholder="Search food..." value={q} onChange={e=>setQ(e.target.value)}/></div><div className="chips"><button className={cat==='all'?'active':''} onClick={()=>setCat('all')}>All</button>{categories.map(c=><button className={cat===c.id?'active':''} key={c.id} onClick={()=>setCat(c.id)}>{c.name}</button>)}</div>{loading?<p>Loading menu…</p>:<div className="grid">{visible.map(p=><article className="card" key={p.id}><div className="photo">{p.image_url?<img src={p.image_url} alt=""/>:<span>🍽️</span>}</div><div className="card-body"><div><h3>{p.name}</h3><p>{p.description||'Freshly prepared at Crave House.'}</p></div><div className="price-row"><strong>{money(p.price)}</strong><button onClick={()=>add(p)}>+ Add</button></div></div></article>)}</div>}</section>
+ <aside className="cart-panel"><h3>Your order</h3>{cart.length===0?<p>Your cart is empty.</p>:<>{cart.map(i=><div className="cart-item" key={i.id}><span>{i.quantity}× {i.name}</span><b>{money(i.price*i.quantity)}</b></div>)}<div className="total"><span>Total</span><strong>{money(total)}</strong></div><button className="primary full">Checkout</button></>}</aside>
+ </main><footer id="about">© {new Date().getFullYear()} Crave House · Whatever You’re Craving.</footer></div>
+}
+createRoot(document.getElementById('root')).render(<App/>);
